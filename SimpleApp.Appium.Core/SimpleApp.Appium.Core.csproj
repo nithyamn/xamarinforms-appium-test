@@ -13,4 +13,16 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="App.config">
+      <IncludeInPackage>true</IncludeInPackage>
+    </None>
+    <None Update="App.config">
+      <IncludeInPackage>true</IncludeInPackage>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="apps\" />
+  </ItemGroup>
 </Project>

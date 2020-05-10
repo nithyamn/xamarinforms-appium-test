@@ -5,25 +5,19 @@ using OpenQA.Selenium.Appium.iOS;
 
 namespace SimpleApp.Appium.Core
 {
-    [TestFixture]
+    [TestFixture("parallel_ios", "iphone-7")]
+    [TestFixture("parallel_ios", "iphone-7-plus")]
+    [TestFixture("parallel_ios", "iphone-11")]
+    [TestFixture("parallel_ios", "iphone-xs")]
+    [Parallelizable(ParallelScope.Fixtures)]
     public class TestMainPage_iOS: TestMainPage<IOSDriver<IOSElement>, IOSElement>
     {
-        public TestMainPage_iOS(): base("MainPageTests")
-        {
-        }
+        public TestMainPage_iOS(string profile, string device) : base(profile, device) { }
+        
 
         protected override IOSDriver<IOSElement> GetDriver()
         {
             return new IOSDriver<IOSElement>(driverUri, appiumOptions);
-        }
-
-        protected override void InitAppiumOptions(AppiumOptions appiumOptions)
-        {
-            appiumOptions.AddAdditionalCapability(MobileCapabilityType.DeviceName, "iPhone 8 Plus");
-            appiumOptions.AddAdditionalCapability(MobileCapabilityType.PlatformName, "iOS");
-            appiumOptions.AddAdditionalCapability(MobileCapabilityType.PlatformVersion, "12.2");
-            appiumOptions.AddAdditionalCapability(MobileCapabilityType.Udid, "DD98F854-8AEF-489A-9A4A-9BCD0DA078ED");
-            appiumOptions.AddAdditionalCapability(IOSMobileCapabilityType.BundleId, "com.companyname.SimpleApp");
         }
     }
 }

@@ -3,6 +3,7 @@ using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Appium;
 using OpenQA.Selenium.Appium.Enums;
+using System.Xml;
 
 namespace SimpleApp.Appium.Core
 {
@@ -11,43 +12,94 @@ namespace SimpleApp.Appium.Core
         where T : AppiumDriver<W>
         where W : IWebElement
     {
-        private readonly string reportDirectory = "reports";
-        private readonly string reportFormat = "xml";
 
-        protected AppiumTest(string testName)
+        protected AppiumTest(string profile, string device)
         {
-            driverUri = new Uri("http://localhost:4723/wd/hub");
+            this.device = device;
+            this.profile = profile;
 
             appiumOptions = new AppiumOptions();
-            appiumOptions.AddAdditionalCapability("reportDirectory", reportDirectory);
-            appiumOptions.AddAdditionalCapability("reportFormat", reportFormat);
-            appiumOptions.AddAdditionalCapability("testName", testName);
-            appiumOptions.AddAdditionalCapability(MobileCapabilityType.FullReset, "false");
+        }
+
+        protected AppiumTest()
+        {
         }
 
         [OneTimeSetUp]
         public void OneTimeSetup()
         {
-            InitAppiumOptions(appiumOptions);
+
+            XmlDocument doc = new XmlDocument();
+            doc.Load("App.config");
+
+            XmlNode caps = doc.DocumentElement.SelectSingleNode("/configuration/capabilities/" + profile);
+            XmlNode devices = doc.DocumentElement.SelectSingleNode("/configuration/environments/" + device);
+            string appId = null;
+
+            foreach (XmlElement element in caps.ChildNodes)
+            {
+                appiumOptions.AddAdditionalCapability(element.GetAttribute("key"), element.GetAttribute("value"));
+            }
+
+            foreach (XmlElement element in devices.ChildNodes)
+            {
+                appiumOptions.AddAdditionalCapability(element.GetAttribute("key"), element.GetAttribute("value"));
+            }
+
+            username = Environment.GetEnvironmentVariable("BROWSERSTACK_USERNAME");
+            accesskey = Environment.GetEnvironmentVariable("BROWSERSTACK_ACCESS_KEY");
+
+            if (username == null || accesskey == null)
+            {
+                XmlNode appSettings = doc.DocumentElement.SelectSingleNode("/configuration/appSettings");
+                foreach (XmlElement element in appSettings.ChildNodes)
+                {
+                    if (username != null && element.GetAttribute("key").Equals("user"))
+                    {
+                        username = element.GetAttribute("value");
+                    }
+                    else
+                    if (accesskey != null && element.GetAttribute("key").Equals("key"))
+                    {
+                        accesskey = element.GetAttribute("value");
+                    }
+                }
+            }
+           
+
+            appiumOptions.AddAdditionalCapability("browserstack.user", username);
+            appiumOptions.AddAdditionalCapability("browserstack.key", accesskey);
+
+            appId = Environment.GetEnvironmentVariable("BROWSERSTACK_APP_ID");
+            if (appId != null)
+            {
+                appiumOptions.AddAdditionalCapability("app", appId);
+            }
+            driverUri = new Uri("http://" + username + ":" + accesskey + "@hub-cloud.browserstack.com/wd/hub");
             appiumDriver = GetDriver();
         }
 
         [OneTimeTearDown()]
         public void TearDown()
         {
-            // Perform a driver quit so that the report is printed
+            new SessionStatus(appiumDriver.SessionId.ToString()).changeSessionStatus(TestContext.CurrentContext.Result.Outcome.Status.ToString(),
+                TestContext.CurrentContext.Result.Message, username, accesskey);
             appiumDriver.Quit();
         }
 
         protected abstract T GetDriver();
         protected abstract void InitAppiumOptions(AppiumOptions appiumOptions);
         protected T appiumDriver;
+        string username = null;
+        string accesskey = null;
+        private string device;
+        private string profile;
         protected readonly AppiumOptions appiumOptions;
-        protected readonly Uri driverUri;
+        protected Uri driverUri;
 
         public string GetElementText(string elementId)
         {
-            var element = appiumDriver.FindElement(By.Id(elementId));
+            var element = appiumDriver.FindElement(MobileBy.AccessibilityId(elementId));
             var attributName = IsAndroid ? "text" : "value";
             return element.GetAttribute(attributName);
         }
